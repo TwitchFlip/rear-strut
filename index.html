@@ -1,0 +1,592 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Rear strut animation</title>
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="theme-color" content="#111111">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Rear strut">
+<link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,400..800&display=swap" rel="stylesheet">
+<style>
+/* VOICE work: a technical training tool for the fitter who maintains these trucks
+   IDEA the Kress 098455 rear suspension cutaway, set in motion, with the IQAN readouts beside it and the two shop procedures one tap away
+   PICTURE the rear strut as an OEM-style line cutaway with numbered callouts, fluids in the training deck's colours, driven by a pressure model
+   COLOUR white or night ground, black ink, grey line work for metal, deck colours for oil and nitrogen, magenta only for the fault
+   TYPE Archivo wide 800 for titles, Archivo for text
+   LAYOUT laptop: strut left, controls and readouts right; phone: caption, strut, sticky controls on the right, readouts */
+:root{color-scheme:light dark;--bg:light-dark(#ffffff,#0f1115);--ink:light-dark(#111111,#eef0f3);--mut:light-dark(#5d6470,#a3aab6);--line:light-dark(#d9dce1,#2c313a);--soft:light-dark(#f3f4f6,#181b21);--fault:#d6127e;--hp:#e8231f;--lp:#18b4ef;--oil:#1462b8;--metal:light-dark(#f6f6f4,#262a31);--metal2:light-dark(#e3e4e2,#343943);--edge:light-dark(#2a2e35,#c3c9d2);--steel:light-dark(#8a8f98,#6f7580);--ok:#1d9b2e}
+:root[data-theme=light]{color-scheme:light}
+:root[data-theme=dark]{color-scheme:dark}
+*{box-sizing:border-box;min-width:0}
+[hidden]{display:none!important}
+html,body{margin:0}
+body{background:var(--bg);color:var(--ink);font:16px/1.55 Archivo,system-ui,sans-serif;overflow-x:clip}
+.band{padding-block:clamp(20px,3vw,40px);padding-left:max(4vw,16px);padding-right:max(4vw,16px)}
+.wrap{max-width:1240px;margin:0 auto}
+header.band{border-top:8px solid var(--ink);padding-bottom:14px}
+main.band{padding-top:6px}
+h1{font-size:clamp(32px,4.4vw,44px);line-height:1.05;letter-spacing:-.02em;font-weight:800;font-stretch:112%;margin:0 0 8px;text-wrap:balance}
+.lede{margin:0 0 14px;color:var(--mut);max-width:72ch}
+.bar2{display:flex;flex-wrap:wrap;gap:8px 24px;align-items:center}
+.modes,.procs{display:flex;flex-wrap:wrap;gap:8px}
+.procs button{border-color:var(--ok);gap:8px;display:inline-flex;align-items:center}
+.procs button::before{content:"";width:10px;height:10px;border-radius:2px;background:var(--ok)}
+button{font:inherit;font-size:16px;color:var(--ink);background:var(--bg);border:1.5px solid var(--ink);border-radius:8px;min-height:44px;padding:8px 14px;cursor:pointer;touch-action:manipulation;user-select:none;-webkit-user-select:none}
+button:hover{background:var(--soft)}
+button:focus-visible,input:focus-visible{outline:3px solid var(--lp);outline-offset:2px}
+button[aria-pressed=true],button[aria-selected=true]{background:var(--ink);color:var(--bg)}
+button.flt[aria-selected=true]{background:var(--fault);border-color:var(--fault);color:#fff}
+button:disabled{opacity:.4;cursor:default}
+.main{display:grid;grid-template-columns:auto minmax(0,1fr);gap:clamp(16px,3vw,44px);align-items:start}
+.fig{position:relative;width:max(300px,min(420px,calc((100svh - 210px)*.493)));aspect-ratio:400/812}
+.fig>svg{position:absolute;inset:0;width:100%;height:100%;overflow:visible}
+.side{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px 28px;align-content:start;align-items:start}
+.side>.cap,.side>.ctl{grid-column:1/-1}
+.row{display:flex;flex-wrap:wrap;gap:8px}
+.cap{font-size:17px;line-height:1.5;min-height:6.2em;border-left:4px solid var(--ink);padding:2px 0 2px 14px}
+.cap.f{border-color:var(--fault)}
+.cap b{display:block;font-size:20px;line-height:1.2;margin-bottom:4px}
+.steps{list-style:none;margin:0;padding:0;display:grid;gap:6px;counter-reset:s}
+.steps button{width:100%;text-align:left;display:flex;gap:10px;align-items:center;border-color:var(--line)}
+.steps button::before{counter-increment:s;content:counter(s);font-weight:800;width:1.6em;flex:none;text-align:center}
+.steps button[aria-current=step]{border-color:var(--fault);background:color-mix(in srgb,var(--fault) 12%,var(--bg))}
+.read{display:grid;gap:10px;background:var(--soft);border-radius:10px;padding:14px}
+.rh{display:flex;justify-content:space-between;align-items:baseline;gap:8px}
+.big{font-size:34px;font-weight:800;font-stretch:112%;line-height:1;white-space:nowrap}
+.lbl{font-size:14px;color:var(--mut)}
+.bar{position:relative;height:14px;background:var(--bg);border:1px solid var(--line);border-radius:7px;overflow:hidden}
+.bar i{position:absolute;inset:0 auto 0 0;border-radius:7px}
+.bar .tol{position:absolute;top:0;bottom:0;background:color-mix(in srgb,var(--ok) 22%,transparent)}
+.bar .mk{position:absolute;top:-2px;bottom:-2px;width:3px;margin-left:-1.5px;background:var(--ink)}
+.bar .tk{position:absolute;top:0;bottom:0;width:2px;background:var(--ink);opacity:.55}
+.g{display:grid;grid-template-columns:8.2em minmax(0,1fr);gap:4px 10px;align-items:center;font-size:14px}
+.g .v{grid-column:2;color:var(--mut);margin-top:-4px}
+.valve{font-size:15px}
+.info{font-size:15px;border:1px solid var(--line);border-radius:10px;padding:12px 14px;min-height:5em}
+.info b{display:block}
+.notes{border-top:1px solid var(--line)}
+.cols{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,320px),1fr));gap:24px 48px}
+h2{font-size:22px;line-height:1.2;margin:0 0 10px;font-weight:800;font-stretch:112%}
+.notes ul{margin:0;padding-left:1.1em}
+.notes li{margin-bottom:6px}
+.key{list-style:none;padding:0!important;display:grid;grid-template-columns:repeat(auto-fit,minmax(13em,1fr));gap:6px 16px}
+.key li{display:flex;gap:10px;align-items:center}
+.key span{width:22px;height:14px;border-radius:3px;flex:none;border:1px solid var(--edge)}
+svg text{font-family:Archivo,system-ui,sans-serif;font-size:17px;fill:var(--ink);paint-order:stroke;stroke:var(--bg);stroke-width:4px;stroke-linejoin:round}
+svg .num{font-weight:800}
+svg .tag{cursor:pointer}
+svg .tag:hover text{text-decoration:underline}
+svg .ld{stroke:var(--ink);stroke-width:1.2;fill:none}
+.oil{fill:var(--oil)}
+.mt{fill:var(--metal);stroke:var(--edge);stroke-width:1.6}
+.mt2{fill:var(--metal2);stroke:var(--edge);stroke-width:1.4}
+.ln{fill:none;stroke:var(--edge);stroke-width:1.4}
+.flow{fill:none;stroke:var(--lp);stroke-width:4;stroke-dasharray:6 8;stroke-linecap:round}
+.pipe{fill:none;stroke:var(--steel);stroke-width:6}
+/* procedure sheets */
+.scrim{position:fixed;inset:0;background:rgba(10,12,16,.55);z-index:20;display:flex;justify-content:center;align-items:flex-start;padding:4vh 16px;overflow-y:auto}
+.sheet{background:var(--bg);color:var(--ink);width:min(760px,100%);border-radius:14px;border-top:8px solid var(--ok);padding:20px clamp(16px,3vw,32px) 28px;box-shadow:0 10px 40px rgba(0,0,0,.35)}
+.sheet.warn{border-top-color:var(--fault)}
+.sh{display:flex;justify-content:space-between;align-items:flex-start;gap:12px}
+.sheet h2{font-size:clamp(24px,3.4vw,32px);line-height:1.1;margin:4px 0 6px}
+.sheet h3{font-size:18px;margin:22px 0 6px;line-height:1.25}
+.sheet ol,.sheet ul{padding-left:1.4em;margin:6px 0}
+.sheet li{margin-bottom:7px}
+.flag{border-left:4px solid var(--fault);background:color-mix(in srgb,var(--fault) 9%,var(--bg));padding:10px 14px;border-radius:0 8px 8px 0;margin:10px 0}
+.good{border-left:4px solid var(--ok);background:color-mix(in srgb,var(--ok) 9%,var(--bg));padding:10px 14px;border-radius:0 8px 8px 0;margin:10px 0}
+.calc{display:grid;grid-template-columns:auto minmax(0,1fr);gap:10px 16px;align-items:center;background:var(--soft);border-radius:10px;padding:14px;margin:8px 0}
+.calc input{font:inherit;font-size:18px;width:6.5em;min-height:44px;padding:6px 10px;border:1.5px solid var(--ink);border-radius:8px;background:var(--bg);color:var(--ink)}
+.calc .t{font-size:28px;font-weight:800;font-stretch:112%;white-space:nowrap;line-height:1.1}
+.calc .s{font-size:14px;color:var(--mut)}
+.tabs{display:flex;flex-wrap:wrap;gap:8px;margin-top:14px}
+.src{font-size:14px;color:var(--mut);margin-top:20px}
+@media(max-width:1180px){.side{grid-template-columns:minmax(0,1fr)}}
+@media(max-width:760px){.main{grid-template-columns:minmax(0,1fr)}.side{display:contents}.fig{order:2;width:max(280px,min(100%,400px,calc((100svh - 230px)*.493)));margin-inline:auto}.side>*{order:3}.side>.cap{order:1}.ctl.stick{position:sticky;bottom:0;z-index:5;background:var(--bg);padding:10px 0;justify-content:flex-end;border-top:1px solid var(--line)}.sheet{padding-top:16px}}
+@media(max-width:600px){svg text{font-size:18px}.cap{min-height:0}.calc{grid-template-columns:minmax(0,1fr)}}
+</style>
+</head>
+<body>
+<header class="band"><div class="wrap">
+<h1>Rear strut, normal and fault</h1>
+<p class="lede">The 200CIII rear suspension cylinder drawn after the Kress 098455 cutaways, with the training deck's colours for oil and nitrogen. Watch it ride, level and fail, then open the two shop procedures. Tap a numbered label for what that part does.</p>
+<div class="bar2">
+<div class="modes" role="tablist" aria-label="Mode">
+<button role="tab" id="m-empty" data-m="empty" aria-selected="true">Empty ride</button>
+<button role="tab" id="m-loaded" data-m="loaded" aria-selected="false">Loaded ride</button>
+<button role="tab" id="m-level" data-m="level" aria-selected="false">Levelling</button>
+<button role="tab" id="m-fault" data-m="fault" class="flt" aria-selected="false">Hang-up fault</button>
+</div>
+<div class="procs">
+<button id="o-unstick" data-sheet="s-unstick">Unstick the separator</button>
+<button id="o-charge" data-sheet="s-charge">Set or reset precharge</button>
+</div>
+</div>
+</div></header>
+
+<main class="band"><div class="wrap main">
+<div class="fig">
+<svg id="sv" viewBox="0 0 400 812" preserveAspectRatio="xMidYMid meet" role="img" aria-label="Cutaway of the rear suspension cylinder: ball stud and rod on top fixed to the frame, housing and pin eye below on the axle">
+<g id="valve">
+<text x="6" y="574">Levelling</text><text x="6" y="593">valve</text>
+<path class="pipe" d="M21 780V646"/><path class="pipe" d="M49 780V646"/><path id="hose" class="pipe" d="M92 623H136"/>
+<path id="fP" class="flow" d="M21 780V646"/><path id="fT" class="flow" d="M49 646V780"/><path id="fC" class="flow" d="M92 623H136"/>
+<rect x="6" y="600" width="86" height="46" rx="4" fill="var(--bg)" stroke="var(--ink)" stroke-width="2"/>
+<rect id="vc0" x="10" y="606" width="24" height="34" rx="3"/><rect id="vc1" x="37" y="606" width="24" height="34" rx="3"/><rect id="vc2" x="64" y="606" width="24" height="34" rx="3"/>
+<path d="M22 634V612M17 617l5-5 5 5" stroke="var(--ink)" stroke-width="2" fill="none"/>
+<path d="M43 623h12M49 614v18" stroke="var(--ink)" stroke-width="2" fill="none"/>
+<path d="M76 612v22M71 629l5 5 5-5" stroke="var(--ink)" stroke-width="2" fill="none"/>
+<text x="14" y="802">P</text><text x="42" y="802">T</text>
+</g>
+<g id="strut">
+<g class="hsg">
+<rect class="oil" x="125" y="110" width="90" height="400"/>
+<rect id="lpg" x="125" y="400" width="90" height="110" fill="var(--lp)"/>
+<rect id="lpx" x="126" y="400" width="88" height="110" fill="none" stroke="var(--fault)" stroke-width="3" stroke-dasharray="7 5"/>
+<rect id="ghost" x="126" y="400" width="88" height="18" fill="none" stroke="var(--fault)" stroke-width="2.5" stroke-dasharray="5 4"/>
+<g id="lpp"><rect class="mt" x="125" y="0" width="90" height="18"/><path class="ln" d="M131 6H209"/><rect class="mt2" x="140" y="-5" width="5" height="5"/><rect class="mt2" x="195" y="-5" width="5" height="5"/></g>
+<g id="stk" stroke="var(--fault)" stroke-width="4" stroke-linecap="round"><path d="M108 0l22 18M108 -10l22 18M232 0l-22 18M232 -10l-22 18"/></g>
+</g>
+<rect class="oil" x="137" y="58" width="66" height="280"/><rect class="mt2" x="137" y="54" width="66" height="4"/>
+<rect id="hpg" x="137" y="58" width="66" height="130" fill="var(--hp)"/>
+<g id="hpp"><rect class="mt" x="137" y="0" width="66" height="16"/><path class="ln" d="M142 5H198"/><rect class="mt2" x="148" y="16" width="5" height="5"/><rect class="mt2" x="187" y="16" width="5" height="5"/></g>
+<path class="mt2" d="M137 204h8v6h-8zM195 204h8v6h-8z"/>
+<rect class="mt" x="131" y="54" width="6" height="284"/><rect class="mt" x="203" y="54" width="6" height="284"/>
+<path class="mt" d="M125 336H215V360H125Z"/>
+<rect class="oil" x="142" y="336" width="6" height="24"/><rect class="oil" x="192" y="336" width="6" height="24"/>
+<rect class="oil" x="131" y="318" width="6" height="7"/><rect class="oil" x="203" y="318" width="6" height="7"/>
+<g class="hsg">
+<path class="mt" d="M115 110H125V510H115Z"/><path class="mt" d="M215 110H225V510H215Z"/>
+<path class="mt2" d="M125 110H131V122H125ZM209 110H215V122H209Z"/>
+<path class="mt" d="M115 510H225V522H115Z"/>
+<path class="mt" d="M115 522C115 538 146 540 146 552V630H194V552C194 540 225 538 225 522Z"/>
+<path class="ln" d="M152 560V622M188 560V622"/>
+<circle class="mt" cx="170" cy="652" r="25"/><circle class="mt2" cx="170" cy="652" r="11"/>
+<path class="ln" d="M228 150V470C228 492 214 500 210 530V580" style="stroke-width:2"/>
+<path class="ln" d="M232 300V480C232 500 222 512 218 540V600" style="stroke-width:2"/>
+<rect class="mt2" x="203" y="580" width="16" height="12" rx="2"/>
+<rect class="mt2" x="211" y="600" width="14" height="10" rx="2"/>
+<circle cx="211" cy="586" r="4" fill="var(--ink)"/>
+<path id="fV" class="flow" d="M219 586H252V640"/>
+<path class="pipe" d="M136 596H122C110 596 108 586 108 572V128H120" style="stroke-width:5"/>
+<rect class="oil" x="115" y="123" width="16" height="10"/>
+<rect class="mt2" x="136" y="590" width="12" height="12" rx="2"/>
+<path id="fC2" class="flow" d="M136 596H122C110 596 108 586 108 572V128H128" style="stroke-width:3"/>
+</g>
+<path class="mt" d="M112 40H228V54H112Z"/>
+<rect class="mt2" x="120" y="34" width="8" height="6"/><rect class="mt2" x="212" y="34" width="8" height="6"/>
+<rect class="mt2" x="222" y="42" width="12" height="10" rx="2"/>
+<rect class="mt" x="164" y="26" width="12" height="14"/>
+<circle class="mt" cx="170" cy="17" r="12"/>
+<rect id="ct" x="125" y="360" width="90" height="7" rx="2" fill="var(--fault)"/>
+</g>
+<g id="tags"></g>
+<g id="ltag"><g class="tag" data-i="feed" tabindex="0" role="button"><rect x="2" y="338" width="104" height="30" fill="transparent"/><line class="ld" x1="80" y1="354" x2="108" y2="360"/><circle cx="108" cy="360" r="2.6" fill="var(--ink)"/><text x="6" y="360">Feed line</text></g></g>
+</svg>
+</div>
+
+<div class="side">
+<div class="cap" id="cap"></div>
+<div class="ctl row stick">
+<span id="c-ride" class="row"><button id="play" aria-pressed="true">Pause</button></span>
+<span id="c-level" class="row" hidden>
+<button id="load">Load the truck</button>
+<button id="dump">Dump the load</button>
+<button id="auto" aria-pressed="true">Auto level</button>
+<button id="up" disabled>Hold to raise</button>
+<button id="down" disabled>Hold to lower</button>
+<button id="blow">Blowdown</button>
+<button id="reset">Reset</button>
+</span>
+<span id="c-fault" class="row" hidden><button id="back">Back</button><button id="next">Next</button><button id="all">Play all</button></span>
+<button id="slow" aria-pressed="false">Slow motion</button>
+</div>
+<div class="read" aria-live="off">
+<div class="rh"><span class="lbl">Rear ride height</span><span class="big" id="rhv">50%</span></div>
+<div class="bar" aria-hidden="true"><div class="tol" style="left:35%;width:30%"></div><div class="mk" id="rhm" style="left:50%"></div></div>
+<div class="lbl">Shaded: ride height 50% ± 15% auto-level tolerance (the deck's IQAN example)</div>
+<div class="valve"><span class="lbl">Levelling valve</span><br><span id="vt">Centred, oil held in the strut</span></div>
+<div class="g">
+<span>Oil in strut</span><div class="bar"><i id="bo" style="background:var(--oil)"></i></div><span class="v" id="vo"></span>
+<span>Bottom N₂</span><div class="bar"><i id="bl" style="background:var(--lp)"></i><span class="tk" style="left:12.1%"></span></div><span class="v" id="vl"></span>
+<span>Top N₂</span><div class="bar"><i id="bh" style="background:var(--hp)"></i><span class="tk" style="left:42.1%"></span></div><span class="v" id="vh"></span>
+</div>
+<div class="lbl">Bars run 0–3500 psi. Ticks mark the rear precharges, 425 bottom and 1475 top. Live figures come from a simple model and are only a guide.</div>
+</div>
+<div id="sbox" hidden><ol class="steps" id="steps"></ol></div>
+<div class="info" id="info"><b>Tap a numbered label on the strut</b>to see what that part does.</div>
+</div>
+</div></main>
+
+<section class="band notes"><div class="wrap cols">
+<div>
+<h2>Colours and numbers</h2>
+<ul class="key">
+<li><span style="background:var(--lp)"></span>4 · Low-pressure nitrogen</li>
+<li><span style="background:var(--hp)"></span>3 · High-pressure nitrogen</li>
+<li><span style="background:var(--oil)"></span>Hydraulic oil (8 cavity, 9 oil chamber)</li>
+<li><span style="background:var(--metal)"></span>Metal parts, Kress line style</li>
+<li><span style="background:var(--fault)"></span>Fault marks</li>
+</ul>
+<p class="lbl">Numbers 1–9 follow the Kress 098455 legend: 1 upper separator, 2 lower separator, 3 high-pressure chamber, 4 low-pressure chamber, 5 rod, 6 housing, 7 orifices, 8 cavity, 9 oil chamber.</p>
+</div>
+<div>
+<h2>Where each part comes from</h2>
+<ul>
+<li>Layout, motion, charges and charging method: Kress 098455 Systems Operation, Testing and Adjusting (Feb 2022). The training deck's strut cutaway shows the front layout, so it isn't used for the drawing.</li>
+<li>Rear precharges of 425 ±50 psi bottom and 1475 ±50 psi top at 21 °C: Kress 098455, the hydraulic schematic and the IQAN screen. Kress's temperature table doesn't match its own spec, so the page uses the gas-law correction instead.</li>
+<li>Levelling: the rear levelling valve, sensor and auto-level slides, the IQAN levelling screen, and the hydraulic schematic.</li>
+<li>Fault: your readings and your working theory (hard extension lets the lower separator ride up and bind). Not confirmed by Kress.</li>
+<li>The unstick procedure is not a Kress procedure. Get Kress or supervisor approval before using it.</li>
+</ul>
+</div>
+</div></section>
+
+<div class="scrim" id="s-unstick" hidden>
+<div class="sheet warn" role="dialog" aria-modal="true" aria-labelledby="h-unstick">
+<div class="sh"><div><span class="lbl">Procedure</span><h2 id="h-unstick">Unstick the lower separator</h2></div><button class="x">Close</button></div>
+<div class="flag"><b>Not a Kress procedure.</b> Get Kress or your supervisor to approve it first, and do it under your site's isolation rules. It runs the engine with a nitrogen valve open, which the manual never does.</div>
+<h3>Why it happens (working theory)</h3>
+<p>The lower separator (2) sits in the housing under the rod end. When the rear extends hard, for example when the load leaves at the dump, oil can't refill the housing fast enough through the orifices (7). The bottom gas then pushes the separator further up than it normally goes, and it binds there. At ride height the rod end never comes down far enough to touch it, so nothing knocks it free.</p>
+<h3>Signs</h3>
+<ul>
+<li>On blowdown the rear stops above 0% while the strut oil reads 0 psi.</li>
+<li>The bottom nitrogen reads low with the struts blown down.</li>
+<li>The rear jolts down when raise pressure first reaches the strut.</li>
+</ul>
+<h3>Check first</h3>
+<ol>
+<li>Engine off. Open the manual override on the blowdown solenoid so the struts are open to tank.</li>
+<li>Let it settle and read IQAN. If the rear is at 0% with the oil at 0 psi, the separator is free: go straight to <i>Set or reset precharge</i>.</li>
+<li>If the rear sits above 0%, the separator is either stuck or being held up by too much gas. Carry on below.</li>
+</ol>
+<h3>Steps</h3>
+<ol>
+<li><b>Drain the bottom chamber</b> at the scissor-link charge valve with the low-pressure charging assembly (224506). Use the Kress decrease steps: T-handle in until the gauge reads, open the poppet three turns, then open the bleed valve slowly. Run the bleed into an approved container. Both rear struts drain together because their bottom chambers are linked.</li>
+<li><b>Watch the rear.</b> If it comes all the way down as the gas leaves, the separator wasn't stuck. It was being held up by too much gas. Skip to step 7.</li>
+<li><b>Watch the bleed.</b> A little oil is normal (you saw under 100 mL). If oil keeps flowing, the separator seal is leaking and the cylinder needs repair. Stop here.</li>
+<li><b>Keep the drain open into the container and clear everyone from the scissor link and rear end.</b> Start the engine and use manual raise in short bursts. With no gas under it, the oil only has to beat friction to push the separator down.</li>
+<li><b>Read what happens.</b>
+<ul>
+<li>The pump runs but the rear doesn't lift at first, then starts to rise: the separator has moved down to the bottom and is free.</li>
+<li>The rear lifts straight away: the separator is still stuck. Stop. The strut needs to come out.</li>
+<li>Oil comes out of the drain once the separator bottoms: the seal is leaking. Stop. Repair.</li>
+</ul></li>
+<li><b>Lower the rear fully and shut down.</b></li>
+<li><b>Open the blowdown override and confirm 0% and 0 psi on IQAN,</b> then recharge with <i>Set or reset precharge</i>. Because the strut is open to tank, the gas lifts the separator back up to the rod end as the oil leaves. That's the position the 425 psi spec assumes.</li>
+</ol>
+<h3>Hazards</h3>
+<ul>
+<li>High-pressure oil out of the open charge valve if the seal leaks. Use a hose to the container and stand clear of the valve while pressure is on.</li>
+<li>The rear rising, and crush points at the scissor link.</li>
+<li>Engine running with a nitrogen valve open, which is outside the manual.</li>
+</ul>
+<div class="good"><b>Afterwards:</b> repeat the blowdown test at the next service. If the bottom reads low again or the rear hangs up again, the separator is binding repeatedly and the strut needs a rebuild. Ask Kress whether the lower separator has a stop that keeps it from riding too high.</div>
+<p class="src">Built from this investigation, the Kress 098455 decrease steps and the training deck's drain and leak-check slides.</p>
+</div></div>
+
+<div class="scrim" id="s-charge" hidden>
+<div class="sheet" role="dialog" aria-modal="true" aria-labelledby="h-charge">
+<div class="sh"><div><span class="lbl">Procedure · Kress 098455</span><h2 id="h-charge">Set or reset the rear precharge</h2></div><button class="x">Close</button></div>
+<h3>Target for today's temperature</h3>
+<div class="calc">
+<label for="tc">Ambient °C</label><input id="tc" type="number" inputmode="decimal" value="30" min="-10" max="55" step="1">
+<span class="lbl">Bottom (4)</span><div><div class="t" id="tb">438 psi</div><div class="s" id="tbr">band 388–488</div></div>
+<span class="lbl">Top (3)</span><div><div class="t" id="tt">1521 psi</div><div class="s" id="ttr">band 1471–1571</div></div>
+</div>
+<p class="lbl">Spec is 425 ±50 psi bottom and 1475 ±50 psi top at 21 °C. Correct for temperature when it's more than 5.5 °C away: target = spec × (°C + 273) ÷ 294. Kress's own table (Table 4) lists 220 and 1200 psi at 21 °C, which doesn't match the spec, so don't use its numbers.</p>
+<h3>Why the order matters</h3>
+<p>The gauge only tells you how much nitrogen is in there if the lower separator is where Kress assumes: pushed up against the rod end, with the rear fully down. Getting it there needs the oil free to go to tank. If the oil is locked in, or the separator is stuck, the same reading means a different amount of gas. That's how a "low" bottom ends up overcharged.</p>
+<div class="tabs" role="tablist" aria-label="Procedure part">
+<button role="tab" aria-selected="true" data-t="p-set">Set or check</button>
+<button role="tab" aria-selected="false" data-t="p-lower">Lower the charge</button>
+<button role="tab" aria-selected="false" data-t="p-reset">Reset from zero</button>
+</div>
+<h3>Before you start (all three)</h3>
+<ol>
+<li>Engine off. Kress: don't run the engine while you check the precharge.</li>
+<li>Relieve hydraulic system pressure (Operation and Maintenance Manual, System Pressure Release).</li>
+<li>Struts fully lowered, then blown down and held open to tank. Use the manual override on the blowdown solenoid (turn and pull to open), or IQAN levelling blowdown with the key on.</li>
+<li><b>Check IQAN: rear at 0% and strut oil at 0 psi.</b> If the rear sits above 0%, stop and use <i>Unstick the separator</i>.</li>
+<li>Let the temperature settle for 10 minutes before reading. IQAN's nitrogen readings only count blown down, settled and temperature corrected.</li>
+<li>Low-pressure charging assembly 224506 on the bottom only, high-pressure 224500 on the top only. Dry nitrogen (99.8%) from a bottle with a CGA 580 connection. Never oxygen, never an adapter.</li>
+</ol>
+<div id="p-set">
+<h3>Set or check (raise the charge)</h3>
+<ol>
+<li>Remove the cap from the charge valve.</li>
+<li>Back the gas chuck T-handle all the way out (anticlockwise).</li>
+<li>Close the bleed valve on the charging assembly.</li>
+<li>Fit the swivel nut to the charge valve at 10–15 in-lb, with no loops or twists in the hose.</li>
+<li>Turn the T-handle in until the gauge shows chamber pressure. Don't wind it all the way down or you'll damage the valve core.</li>
+<li>Hold the charge valve hex with one spanner and unscrew the poppet hex with another. Three turns is fully open.</li>
+<li>Crack the shut-off valve and fill slowly. Stop about 50 psi under the target.</li>
+<li>Wait 10–15 minutes for the gas temperature to settle, then top up to target. If you go over, use <i>Lower the charge</i>.</li>
+<li>Tighten the poppet hex to close the poppet, 5–8 ft-lb.</li>
+<li>Turn the T-handle all the way out, then open the bleed valve.</li>
+<li>Hold the charge valve still, loosen the swivel nut and remove the charging assembly.</li>
+<li>Refit the cap, 18–27 in-lb.</li>
+</ol>
+</div>
+<div id="p-lower" hidden>
+<h3>Lower the charge</h3>
+<ol>
+<li>Do steps 1–6 of <i>Set or check</i>.</li>
+<li>Open the bleed valve slowly. Never press the valve core with anything, because high pressure can rupture the rubber seat.</li>
+<li>Wait 10–15 minutes for the gas temperature to settle, then check again.</li>
+<li>At target, finish with steps 9–12 of <i>Set or check</i>.</li>
+</ol>
+</div>
+<div id="p-reset" hidden>
+<h3>Reset from zero (bottom chamber)</h3>
+<ol>
+<li>Do steps 1–6 of <i>Set or check</i> on the scissor-link charge valve, with the bleed running into an approved container.</li>
+<li>Open the bleed valve slowly and let the chamber drain completely. Both rear struts drain together through the linked bottom chambers. Check that both 111183 valves are open.</li>
+<li>Watch the oil. A little is normal. If oil keeps flowing, the separator seal is leaking and the cylinder needs repair.</li>
+<li>Check IQAN again: rear at 0%, oil at 0 psi, struts still open to tank.</li>
+<li>Close the bleed valve and charge from empty with steps 7–12 of <i>Set or check</i>. As the gas goes in, it pushes the separator up to the rod end and the oil goes to tank.</li>
+</ol>
+</div>
+<div class="good"><b>Finish with the blowdown test.</b> Still engine off and open to tank, the rear should sit at 0% with 0 psi oil. Close the override, start up and let auto level bring it to ride height. Record the settled bottom and top readings and compare them at the next service.</div>
+<p class="src">Kress 098455 Testing and Adjusting, Rear Suspension Cylinder Test and Charge; training deck Module 3 drain slides; hydraulic schematic for the linked chambers.</p>
+</div></div>
+
+<script>
+{
+const $=id=>document.getElementById(id);
+const S=130,Y0=110,LMAX=262,LMIN=12,HMAX=130,HMIN=20,AS=1.306,AH=.716,PL0=425,PH0=1475,nH=PH0*HMAX,nL=PL0*132;
+const lcap=x=>Math.min(LMAX,132+S*x);
+const hOf=P=>P>0?Math.max(HMIN,Math.min(HMAX,nH/P)):HMAX;
+const lFree=P=>P>0?Math.min(LMAX,nL/P):LMAX;
+const lOf=(P,x)=>Math.max(LMIN,Math.min(lFree(P),lcap(x)));
+const rhs=(P,x)=>AH*(HMAX-hOf(P))+S*x+AS*(LMAX-lOf(P,x));
+const solveP=(V,x)=>{if(V<=rhs(0,x))return 0;let a=0,b=40000;for(let i=0;i<40;i++){const m=(a+b)/2;if(rhs(m,x)<V)a=m;else b=m}return(a+b)/2};
+const gas=(P,x)=>{const l=lOf(P,x),h=hOf(P);return{l,h,PL:nL/l,PH:nH/h,contact:lcap(x)<lFree(P)-.01}};
+const reduce=matchMedia('(prefers-reduced-motion: reduce)').matches;
+const psi=p=>'≈'+(Math.round(p/25)*25).toLocaleString()+' psi';
+
+const VT={hold:'Centred, oil held in the strut',raise:'Raise: supply oil into the strut',lower:'Lower: strut oil back to tank',blow:'Blowdown: strut open to tank'};
+const INFO={
+feed:['Oil feed line','From the levelling valve by hose to a fitting at the bottom of the housing, then up a hard line on the outside of the housing and in at the top of the housing, into the cavity (8). From there the oil reaches the oil chamber (9) through the orifices, and the rod through its open end. The exact entry point is drawn from your description and the Kress cutaway lines.'],
+hpg:['3 · High-pressure nitrogen chamber','In the top of the rod. 1475 ±50 psi at 21 °C. Its separator rests on its stop until oil pressure passes that charge, so it only does the springing when loaded. Linked to the other rear strut\'s top chamber. Charged at the valve beside the top cap.'],
+hpp:['1 · Upper separator','Floating piston between the top nitrogen and the oil. Kress sets the top charge so it sits near the middle of its chamber when the truck is loaded.'],
+rod:['5 · Rod','On top, fixed to the frame through the ball stud. It doesn\'t move with the wheels: the housing slides up and down over it. Its lower end is a piston with the orifices in it.'],
+cav:['8 · Cavity','The oil-filled space between the rod and the housing, above the rod piston. It grows as the housing moves up and shrinks as it moves down, so oil is forced through the orifices both ways.'],
+orf:['7 · Orifices','In the rod piston. They control how fast oil moves between the oil chamber and the cavity, which damps the ride. They also limit how fast oil can refill the housing when the rear extends hard.'],
+och:['9 · Oil chamber','Inside the housing, between the rod piston and the lower separator. Oil from the levelling valve comes up the hard line on the housing, in at the top into the cavity (8), then through the orifices. With the oil blown down to 0 psi, the bottom gas pushes the separator up until it meets the rod piston, closing this chamber.'],
+hou:['6 · Housing','At the bottom, pinned to the rear axle through the eye. It moves with the wheels and slides up over the rod. Holds the oil chamber and the bottom nitrogen.'],
+lpp:['2 · Lower separator','Floating piston in the housing. Kress sets the bottom charge so it sits near the middle of its chamber when empty. With the oil at 0 psi the gas pushes it against the rod piston, acting on the full 12-inch bore. That\'s about 1.3 times the 10.5-inch rod area the oil holds the rear up on.'],
+lpg:['4 · Low-pressure nitrogen chamber','In the bottom of the housing. 425 ±50 psi at 21 °C. Does the springing empty and is squashed flat loaded. Linked to the other rear strut\'s bottom chamber, so one charge and one reading cover both.'],
+chg:['Bottom charge valve','On the scissor link, one port for both rear struts. Charge only with the engine off, the rear fully down and the strut held open to tank. See Set or reset precharge.'],
+vlv:['Rear levelling valve','Raise and lower solenoids pilot the main spool, and a third solenoid blows the struts down, all on rear IQAN module ID 3. P is supply from the steering valve and T is tank. With the solenoids off, a pilot-operated check and the normally closed blowdown valve lock the oil in the struts.']};
+
+const yh=s=>Y0+S*s.x;
+const tags=[
+{id:'hpg',n:'3',t:'Top nitrogen',y:72,tg:s=>[203,58+s.h/2]},
+{id:'hpp',n:'1',t:'Upper separator',y:150,tg:s=>[203,66+s.h]},
+{id:'rod',n:'5',t:'Rod',y:222,tg:()=>[209,240]},
+{id:'cav',n:'8',t:'Cavity',y:286,tg:s=>[212,Math.max(yh(s)+20,300)]},
+{id:'orf',n:'7',t:'Orifices',y:346,tg:()=>[198,348]},
+{id:'och',n:'9',t:'Oil chamber',y:412,tg:s=>[205,(366+yh(s)+400-s.l-18)/2]},
+{id:'hou',n:'6',t:'Housing',y:478,tg:s=>[225,yh(s)+300]},
+{id:'lpp',n:'2',t:'Lower separator',y:546,tg:s=>[215,yh(s)+400-s.l-9]},
+{id:'lpg',n:'4',t:'Bottom nitrogen',y:616,tg:s=>[215,yh(s)+400-s.l/2]},
+{id:'chg',n:'',t:'Charge valve',y:700,tg:s=>[219,yh(s)+476]}];
+$('tags').innerHTML=tags.map(t=>`<g class="tag" data-i="${t.id}" tabindex="0" role="button"><rect x="252" y="${t.y-22}" width="146" height="30" fill="transparent"/><line class="ld" id="ld-${t.id}" x1="256" y1="${t.y-6}" x2="256" y2="${t.y-6}"/><circle id="dt-${t.id}" r="2.6" fill="var(--ink)"/><text x="260" y="${t.y}">${t.n?`<tspan class="num">${t.n}</tspan> `:''}${t.t}</text></g>`).join('');
+const showInfo=k=>{const d=INFO[k];if(!d)return;const el=$('info');el.textContent='';const b=document.createElement('b');b.textContent=d[0];el.append(b,d[1])};
+for(const gid of['tags','ltag'])$(gid).addEventListener('click',e=>{const g=e.target.closest('.tag');if(g)showInfo(g.dataset.i)});
+$('ltag').addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();showInfo('feed')}});
+$('tags').addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){const g=e.target.closest('.tag');if(g){e.preventDefault();showInfo(g.dataset.i)}}});
+$('valve').style.cursor='pointer';$('valve').addEventListener('click',()=>showInfo('vlv'));
+
+let mode='empty',playing=!reduce,speed=1,t=0,flowT=0;
+let cur={x:.5,l:70,h:130,P:800,PL:800,PH:1475,valve:'hold',stuck:false,contact:false,ghost:0,extra:false,vent:false,shake:0};
+let gtxt=null,capKey='';
+const hsg=[...document.querySelectorAll('.hsg')];
+
+function render(s){
+  const dy=S*s.x;
+  const hd=`M92 623C116 623 116 ${596+dy} 136 ${596+dy}`;$('hose').setAttribute('d',hd);$('fC').setAttribute('d',hd);
+  hsg.forEach(g=>g.setAttribute('transform',`translate(0 ${dy})`));
+  $('strut').setAttribute('transform',s.shake?`translate(${(Math.random()-.5)*6} ${(Math.random()-.5)*4})`:'');
+  const lpTop=510-s.l;
+  $('lpg').setAttribute('y',lpTop);$('lpg').setAttribute('height',s.l);
+  $('lpx').setAttribute('y',lpTop);$('lpx').setAttribute('height',s.l);$('lpx').style.display=s.extra?'':'none';
+  $('lpp').setAttribute('transform',`translate(0 ${lpTop-18})`);
+  $('stk').setAttribute('transform',`translate(0 ${lpTop-18})`);$('stk').style.display=s.stuck?'':'none';
+  $('ghost').style.display=s.ghost?'':'none';if(s.ghost)$('ghost').setAttribute('y',510-s.ghost-18);
+  $('hpg').setAttribute('height',s.h);$('hpp').setAttribute('transform',`translate(0 ${58+s.h})`);
+  $('ct').style.display=s.contact?'':'none';
+  const v=s.valve;
+  ['vc0','vc1','vc2'].forEach((id,i)=>{const on=(i===0&&v==='raise')||(i===1&&v==='hold')||(i===2&&(v==='lower'||v==='blow'));$(id).setAttribute('fill',on?(v==='blow'?'var(--steel)':'var(--lp)'):'var(--soft)')});
+  const fl={fP:v==='raise',fC:v!=='hold',fC2:v!=='hold',fT:v==='lower'||v==='blow',fV:s.vent};
+  for(const k in fl)$(k).style.display=fl[k]?'':'none';
+  $('fP').style.strokeDashoffset=-flowT;$('fT').style.strokeDashoffset=-flowT;$('fV').style.strokeDashoffset=-flowT;
+  $('fC').style.strokeDashoffset=v==='raise'?-flowT:flowT;$('fC2').style.strokeDashoffset=v==='raise'?-flowT:flowT;
+  for(const tg of tags){const[a,b]=tg.tg(s);const l=$('ld-'+tg.id);l.setAttribute('x2',a);l.setAttribute('y2',b);const d=$('dt-'+tg.id);d.setAttribute('cx',a);d.setAttribute('cy',b)}
+  $('rhv').textContent=Math.round(s.x*100)+'%';$('rhm').style.left=Math.min(100,Math.max(0,s.x*100))+'%';
+  $('vt').textContent=VT[v];
+  const w=p=>Math.min(100,Math.max(0,p/3500*100))+'%';
+  $('bo').style.width=w(s.P);$('bl').style.width=w(s.PL);$('bh').style.width=w(s.PH);
+  $('vo').textContent=gtxt?gtxt.o:psi(s.P);$('vl').textContent=gtxt?gtxt.b:psi(s.PL);$('vh').textContent=gtxt?gtxt.t:psi(s.PH);
+}
+function setCap(key,title,body,fault){if(capKey===key)return;capKey=key;const c=$('cap');c.className='cap'+(fault?' f':'');c.textContent='';const b=document.createElement('b');b.textContent=title;c.append(b,body)}
+
+const CAPS={
+empty:['Empty: the bottom chamber does the work','Oil pressure sits between the two charges, so the upper separator (1) stays on its stop. Each bump pushes the housing up over the rod, forces oil from the oil chamber (9) through the orifices (7) into the cavity (8), and squeezes the bottom nitrogen (4). Kress sets that charge so the lower separator sits mid-chamber when empty.'],
+loaded:['Loaded: the top chamber takes over','Oil pressure is above both charges. The lower separator (2) is pushed to the bottom of the housing with its nitrogen squashed flat, so the high-pressure nitrogen (3) in the rod does the springing. Two chambers give a soft ride both empty and loaded.']};
+function ride(dt){
+  if(playing)t+=dt;
+  const W=mode==='loaded'?2600:800,V=rhs(W,.5);
+  const x=.5-.11*Math.sin(2*Math.PI*t/2.2),P=solveP(V,x),g=gas(P,x);
+  Object.assign(cur,{x,P,l:g.l,h:g.h,PL:g.PL,PH:g.PH,valve:'hold',stuck:false,contact:false,ghost:0,extra:false,vent:false,shake:0});
+  setCap(mode,...CAPS[mode]);
+}
+
+let lv;
+const lvReset=()=>{lv={x:.5,v:0,W:800,Wt:800,V:rhs(800,.5),auto:'hold',man:null,blow:false,manual:false}};
+lvReset();
+function level(dt){
+  for(let k=0;k<4;k++){
+    const d=dt/4;
+    lv.W+=Math.max(-700*d,Math.min(700*d,lv.Wt-lv.W));
+    const P=solveP(lv.V,lv.x),g=gas(P,lv.x);
+    let v='hold';
+    if(lv.blow)v='blow';
+    else if(lv.manual)v=lv.man||'hold';
+    else{
+      if(lv.auto==='raise'&&lv.x>=.5)lv.auto='hold';
+      if(lv.auto==='lower'&&lv.x<=.5)lv.auto='hold';
+      if(lv.auto==='hold'){if(lv.x<.35)lv.auto='raise';else if(lv.x>.65)lv.auto='lower'}
+      v=lv.auto}
+    if(v==='raise'&&P<3000)lv.V+=35*d;
+    if((v==='lower'||v==='blow')&&P>1)lv.V-=(v==='blow'?70:35)*d;
+    lv.V=Math.max(lv.V,rhs(0,lv.x)-1);
+    const F=P+(g.PL-P)*AS*(g.contact?1:0)-lv.W;
+    lv.v+=(30*F/lv.W-14*lv.v)*d;lv.x+=lv.v*d;
+    if(lv.x<0){lv.x=0;if(lv.v<0)lv.v=0}
+    if(lv.x>1){lv.x=1;if(lv.v>0)lv.v=0}
+    Object.assign(cur,{x:lv.x,P,l:g.l,h:g.h,PL:g.PL,PH:g.PH,valve:v,contact:g.contact&&P<1,stuck:false,ghost:0,extra:false,vent:false,shake:0});
+  }
+  const v=cur.valve,ld=lv.Wt>800,down=cur.P<2&&cur.x<.01;
+  if(v==='blow')setCap('b'+down,'Blowdown',down?'Open to tank, oil at 0 psi, and the rear sits all the way down with the lower separator resting against the rod piston. This is the state the precharge has to be checked and set in. Compare it with step 7 of the fault.':'The blowdown solenoid opens the strut to tank and the rear comes down as the oil leaves.');
+  else if(lv.manual)setCap('m'+v,'Manual mode',v==='raise'?'Raise solenoid on: oil from the steering supply goes into the strut.':v==='lower'?'Lower solenoid on: strut oil goes back to tank.':'Auto level is off. Hold Raise or Lower to move the rear.');
+  else if(v==='raise')setCap('r','Too low: raise solenoid on',(ld?'The load has pushed the rear below the tolerance band. ':'')+'IQAN switches on the raise solenoid and supply oil goes into the strut until the sensor is back at ride height.');
+  else if(v==='lower')setCap('l','Too high: lower solenoid on',(ld?'':'The load is off and the rear has risen above the tolerance band. ')+'IQAN switches on the lower solenoid and strut oil goes back to tank until the sensor is back at ride height.');
+  else setCap('h'+ld,'Holding ride height',ld?'Loaded and back at ride height. The valve is centred and the oil is locked in. Levelling is also locked out during the 2nd-gear payload reweigh.':'The valve is centred and the oil is locked in the strut. Load the truck to watch it sag and then correct.');
+}
+
+const FS=[
+{n:'Hard extension',c:"Working theory: the rear extends hard, for example as the load leaves at the dump. Oil can't refill the housing fast enough through the orifices (7), so the bottom gas pushes the lower separator (2) further up than it normally goes, and it binds there (pink marks).",g:{o:'drops as it extends',b:'normal',t:'1475 psi precharge'},
+ sub:[{to:{x:.5,l:70,P:800,PL:800,h:130,PH:1475},d:0,set:{valve:'hold',stuck:false,contact:false,ghost:0,extra:false,vent:false,shake:0}},{to:{},d:.6},{to:{x:.95,l:164.5,P:20,PL:340},d:.7,end:{stuck:true}}]},
+{n:'Back at ride height',c:"Back at ride height the separator stays stuck high, well above where it should sit (dashed). The rod end never comes down far enough to touch it, so nothing knocks it free and the truck keeps working normally.",g:{o:'normal',b:'gas space too big'},
+ sub:[{to:{x:.5,P:800},d:2.2,set:{ghost:70}}]},
+{n:'Blowdown props at about 25%',c:"In the workshop, blowdown takes the oil to 0 psi, but the rod end lands on the stuck separator and props the rear at about 25%. Behind it the gas has a bigger space than normal, so the bottom reads low: about 100 psi.",g:{o:'0 psi',b:'≈100 psi (your reading)'},
+ sub:[{to:{x:.25,P:0,PL:100},d:2.6,set:{valve:'blow',ghost:0},end:{contact:true}}]},
+{n:'Charged to 450',c:"Charged to 450 psi with the oil locked in and the separator still stuck. That's inside the 425 ±50 spec on the gauge, but it fills the oversized space (pink outline), so there's far more nitrogen in there than the spec allows for.",g:{o:'0 psi',b:'450 psi (charged)'},
+ sub:[{to:{PL:450},d:1.4,set:{valve:'hold',extra:true}}]},
+{n:'Raise: hard drop to 11%',c:"Raise pressure gets between the rod end and the separator. Oil and gas push on the same area of the separator, so the oil only has to beat the gas to move it, and it breaks free. Now the rear's weight sits on the oil, which only pushes up on the smaller rod area, so the rear drops until the gas compresses enough to carry it.",g:{o:'pump pressure',b:'compressed'},
+ sub:[{to:{x:.11,l:110,P:1800,PL:1800,h:106.5,PH:1800},d:.35,set:{valve:'raise',stuck:false,contact:false,shake:1},end:{shake:0}},{to:{},d:.9}]},
+{n:'Raised to full height',c:"Raised to full height front and rear. The separator is free now, but with the extra nitrogen it sits much higher in the housing than it should.",g:{o:'normal',b:'over spec'},
+ sub:[{to:{x:1,l:150,P:800,PL:800,h:130,PH:1475},d:3,set:{valve:'raise'}},{to:{},d:.3,set:{valve:'hold'}}]},
+{n:'Blowdown holds at 23%',c:"Engine off, blowdown on, oil at 0 psi, yet the rear stays at 23%. The over-full bottom gas pushes the separator up against the rod piston. Acting on the full 12-inch bore, it holds the rear up on gas alone.",g:{o:'0 psi (your reading)',b:'over spec'},
+ sub:[{to:{x:.45,l:190.5,P:300,PL:500},d:2.2,set:{valve:'blow'}},{to:{x:.23,l:161.9,P:0,PL:575},d:1.2,end:{contact:true}}]},
+{n:'Drain bottom: drops slowly',c:"Draining the bottom chamber at the scissor-link valve lets the rear come down slowly as the gas leaves, all the way to 0%. Less than 100 mL of oil came out, so the separator seal looks OK. The problem was the amount of gas, not oil in the chamber.",g:{b:'draining'},
+ sub:[{to:{x:0,l:132,PL:0},d:4.5,set:{vent:true,extra:false}},{to:{},d:.2,set:{vent:false}}]},
+{n:'Fix: free it, then charge open to tank',c:"Make sure the separator is free (see Unstick the separator). Then, engine off, open the manual blowdown override and confirm 0% and 0 psi on IQAN. With the strut open to tank, the gas lifts the separator to the rod piston as the oil leaves, which is where the 425 psi spec assumes it sits. Charge to the temperature-corrected target and finish with a blowdown test. See Set or reset precharge.",g:{o:'0 psi, open to tank',b:'425 psi (temp corrected)'},
+ sub:[{to:{PL:425},d:1.6,set:{valve:'blow',vent:false,contact:true,extra:false}}]}];
+$('steps').innerHTML=FS.map((s,i)=>`<li><button data-s="${i}">${s.n}</button></li>`).join('');
+const fp={i:0,sub:0,t:0,from:null,play:false,hold:0};
+const gFor=i=>{let g={};for(let j=0;j<=i;j++)Object.assign(g,FS[j].g);return g};
+function snap(i){for(let j=0;j<=i;j++)for(const k of FS[j].sub)Object.assign(cur,k.set||{},k.to,k.end||{});cur.shake=0}
+function goStep(i){
+  snap(Math.max(0,i-1));
+  if(i===0)snap(-1),Object.assign(cur,FS[0].sub[0].set,FS[0].sub[0].to);
+  fp.i=i;fp.sub=0;fp.t=0;fp.hold=0;Object.assign(cur,FS[i].sub[0].set||{});fp.from={...cur};
+  gtxt=gFor(i);setCap('f'+i,FS[i].n,FS[i].c,true);
+  document.querySelectorAll('#steps button').forEach((b,j)=>{if(j===i)b.setAttribute('aria-current','step');else b.removeAttribute('aria-current')});
+  $('back').disabled=i===0;$('next').disabled=i===FS.length-1;
+}
+function fault(dt){
+  const s=FS[fp.i];
+  if(fp.sub>=s.sub.length){
+    if(fp.play){fp.hold+=dt;if(fp.hold>2.4){if(fp.i<FS.length-1)goStep(fp.i+1);else{fp.play=false;$('all').textContent='Play all'}}}
+    return}
+  const k=s.sub[fp.sub];fp.t+=dt;
+  const u=k.d&&!reduce?Math.min(1,fp.t/k.d):1,e=u<.5?2*u*u:1-((-2*u+2)**2)/2;
+  for(const key in k.to)cur[key]=fp.from[key]+(k.to[key]-fp.from[key])*e;
+  if(u>=1){Object.assign(cur,k.end||{});fp.sub++;fp.t=0;if(fp.sub<s.sub.length)Object.assign(cur,s.sub[fp.sub].set||{});fp.from={...cur}}
+}
+const stopPlay=()=>{fp.play=false;$('all').textContent='Play all'};
+$('steps').addEventListener('click',e=>{const b=e.target.closest('button');if(b){stopPlay();goStep(+b.dataset.s)}});
+$('next').addEventListener('click',()=>{stopPlay();if(fp.i<FS.length-1)goStep(fp.i+1)});
+$('back').addEventListener('click',()=>{stopPlay();if(fp.i>0)goStep(fp.i-1)});
+$('all').addEventListener('click',()=>{if(fp.play)stopPlay();else{fp.play=true;$('all').textContent='Stop';goStep(0)}});
+
+function setMode(m){
+  mode=m;capKey='';gtxt=null;
+  document.querySelectorAll('.modes button').forEach(b=>b.setAttribute('aria-selected',b.dataset.m===m));
+  $('c-ride').hidden=!(m==='empty'||m==='loaded');$('c-level').hidden=m!=='level';$('c-fault').hidden=m!=='fault';$('sbox').hidden=m!=='fault';
+  document.querySelector('.ctl').classList.toggle('stick',m!=='level');
+  if(m==='level')lvReset();
+  if(m==='fault'){stopPlay();goStep(0)}
+}
+document.querySelector('.modes').addEventListener('click',e=>{const b=e.target.closest('button');if(b)setMode(b.dataset.m)});
+$('play').addEventListener('click',()=>{playing=!playing;$('play').textContent=playing?'Pause':'Play';$('play').setAttribute('aria-pressed',playing)});
+$('play').textContent=playing?'Pause':'Play';$('play').setAttribute('aria-pressed',playing);
+$('slow').addEventListener('click',()=>{speed=speed===1?.3:1;$('slow').setAttribute('aria-pressed',speed!==1)});
+$('load').addEventListener('click',()=>{lv.blow=false;lv.Wt=2600});
+$('dump').addEventListener('click',()=>{lv.blow=false;lv.Wt=800});
+$('blow').addEventListener('click',()=>{lv.blow=true});
+$('reset').addEventListener('click',()=>{const m=lv.manual;lvReset();lv.manual=m});
+$('auto').addEventListener('click',()=>{lv.manual=!lv.manual;lv.auto='hold';lv.man=null;$('auto').setAttribute('aria-pressed',!lv.manual);$('auto').textContent=lv.manual?'Manual mode':'Auto level';$('up').disabled=$('down').disabled=!lv.manual});
+for(const[id,dir]of[['up','raise'],['down','lower']]){
+  const b=$(id);
+  b.addEventListener('pointerdown',e=>{if(!lv.manual)return;lv.blow=false;lv.man=dir;b.setPointerCapture?.(e.pointerId)});
+  for(const ev of['pointerup','pointercancel','lostpointercapture'])b.addEventListener(ev,()=>{if(lv.man===dir)lv.man=null});
+  b.addEventListener('keydown',e=>{if((e.key===' '||e.key==='Enter')&&lv.manual){lv.blow=false;lv.man=dir}});
+  b.addEventListener('keyup',()=>{if(lv.man===dir)lv.man=null});
+  b.addEventListener('contextmenu',e=>e.preventDefault());
+}
+
+/* procedure sheets */
+let opener=null;
+const openSheet=id=>{opener=document.activeElement;$(id).hidden=false;document.body.style.overflow='hidden';$(id).querySelector('.x').focus()};
+const closeSheet=sc=>{sc.hidden=true;document.body.style.overflow='';opener?.focus?.()};
+document.querySelectorAll('.procs button').forEach(b=>b.addEventListener('click',()=>openSheet(b.dataset.sheet)));
+document.querySelectorAll('.scrim').forEach(sc=>{
+  sc.addEventListener('click',e=>{if(e.target===sc||e.target.classList.contains('x'))closeSheet(sc)});
+});
+document.addEventListener('keydown',e=>{if(e.key==='Escape'){const sc=[...document.querySelectorAll('.scrim')].find(x=>!x.hidden);if(sc)closeSheet(sc)}});
+document.querySelectorAll('.tabs button').forEach(b=>b.addEventListener('click',()=>{
+  document.querySelectorAll('.tabs button').forEach(o=>{o.setAttribute('aria-selected',o===b);$(o.dataset.t).hidden=o!==b});
+}));
+const calc=()=>{const c=parseFloat($('tc').value);if(!isFinite(c)){$('tb').textContent='–';$('tt').textContent='–';return}
+  const k=Math.abs(c-21)<5.5?1:(c+273)/294,b=Math.round(425*k),tp=Math.round(1475*k);
+  $('tb').textContent=b+' psi';$('tbr').textContent=`band ${b-50}–${b+50}`+(k===1?' (within 5.5 °C of 21 °C, no correction)':'');
+  $('tt').textContent=tp.toLocaleString()+' psi';$('ttr').textContent=`band ${(tp-50).toLocaleString()}–${(tp+50).toLocaleString()}`};
+$('tc').addEventListener('input',calc);calc();
+
+let last=performance.now();
+function frame(now){
+  const dt=Math.min(.05,(now-last)/1000)*speed;last=now;
+  if(mode==='empty'||mode==='loaded')ride(dt);else if(mode==='level')level(dt);else fault(dt);
+  if(playing||mode!=='empty'&&mode!=='loaded')flowT+=dt*40;
+  render(cur);
+  requestAnimationFrame(frame);
+}
+setMode('empty');
+requestAnimationFrame(frame);
+}
+</script>
+<script>
+if('serviceWorker' in navigator){window.addEventListener('load',()=>{navigator.serviceWorker.register('sw.js').catch(()=>{})})}
+</script>
+</body>
+</html>
